@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Test activity</string>
+    <string name="clear">Clear</string>
+    <string name="fill_the_holes">Fill the holes</string>
 </resources>
