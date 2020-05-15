@@ -11,6 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/clear"
+        app:layout_constraintBottom_toTopOf="@+id/buttonsGuideline"
         app:layout_constraintEnd_toStartOf="@+id/fillHolesButton"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
@@ -21,6 +22,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/fill_the_holes"
+        app:layout_constraintBottom_toTopOf="@+id/buttonsGuideline"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/clearHolesButton"
@@ -28,9 +30,44 @@
 
     <ImageView
         android:id="@+id/testPadView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="fitCenter"
+        app:layout_constraintBottom_toTopOf="@+id/brushControlGuides"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/buttonsGuideline" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/buttonsGuideline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_end="647dp" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/brushControlGuides"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_end="78dp" />
+
+    <SeekBar
+        android:id="@+id/brushSizeSetting"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:max="50"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toEndOf="@+id/brushSizeText"
+        app:layout_constraintTop_toTopOf="@+id/brushControlGuides" />
+
+    <TextView
+        android:id="@+id/brushSizeText"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:text="@string/brush_size_text"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/brushControlGuides" />
 </androidx.constraintlayout.widget.ConstraintLayout>

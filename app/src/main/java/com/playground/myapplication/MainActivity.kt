@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.TypedValue
+import android.widget.SeekBar
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import kotlinx.android.synthetic.main.activity_main.*
@@ -35,6 +37,28 @@ class MainActivity : AppCompatActivity() {
         })
 
         loadImageLiveData.postValue("IMG_6893.JPG")
+
+        brushSizeSetting.progress = 10
+        brushSizeText.text = getString(R.string.brush_size_text, brushSizeSetting.progress)
+        brushSizeSetting.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                brushSizeText.text = getString(R.string.brush_size_text, brushSizeSetting.progress)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                val progress = seekBar?.progress ?: return
+                testPad.setBrushSize(
+                    TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_DIP,
+                        progress.toFloat(),
+                        resources.displayMetrics
+                    )
+                )
+            }
+        })
     }
 
     @Suppress("SameParameterValue")
