@@ -1,4 +1,4 @@
-package com.playground.myapplication
+package com.rycbar.testapp
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

@@ -1,4 +1,4 @@
-package com.playground.myapplication
+package com.rycbar.testapp
 
 import android.annotation.SuppressLint
 import android.graphics.*
@@ -6,6 +6,10 @@ import android.view.MotionEvent
 import android.widget.ImageView
 
 
+/**
+ * Sketch pad manager connects an imageView with a bitmap, converts it to monochrome (greyScale)
+ * and allows sketching to emulate defected images.
+ */
 class SketchPadManager(private val imageView: ImageView) {
     private lateinit var canvas: Canvas
     private val dirtPaint: Paint = Paint()

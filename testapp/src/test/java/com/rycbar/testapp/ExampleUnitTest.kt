@@ -1,4 +1,4 @@
-package com.playground.myapplication
+package com.rycbar.testapp
 
 import org.junit.Test
 
