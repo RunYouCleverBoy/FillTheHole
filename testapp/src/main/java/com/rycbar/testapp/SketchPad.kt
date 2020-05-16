@@ -2,6 +2,7 @@ package com.rycbar.testapp
 
 import android.annotation.SuppressLint
 import android.graphics.*
+import android.graphics.drawable.BitmapDrawable
 import android.view.MotionEvent
 import android.widget.ImageView
 
@@ -16,8 +17,10 @@ class SketchPadManager(private val imageView: ImageView) {
     private var penPoint: PointF? = null
     private var transform = { x: Float, y: Float -> PointF(x, y) }
 
+    val damagedPixelColour = Color.RED
+
     init {
-        dirtPaint.color = Color.RED
+        dirtPaint.color = damagedPixelColour
         dirtPaint.strokeCap = Paint.Cap.ROUND
         dirtPaint.strokeWidth = imageView.resources.getDimension(R.dimen.sketchPadBrushSize)
         bindClickListener(imageView)
@@ -29,6 +32,8 @@ class SketchPadManager(private val imageView: ImageView) {
     fun setBrushSize(widthDp: Float) {
         dirtPaint.strokeWidth = widthDp.coerceAtLeast(1f)
     }
+
+    fun getBitmap() = (imageView.drawable as? BitmapDrawable)?.bitmap
 
     /**
      * Reload an image as GreyScale to the imageView
@@ -71,7 +76,7 @@ class SketchPadManager(private val imageView: ImageView) {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun bindClickListener(imageView: ImageView) {
-        setupClick(imageView).setOnTouchListener { _, event -> handleClick(event) }
+        imageView.setOnTouchListener { _, event -> handleClick(event) }
     }
 
     /**
@@ -104,5 +109,4 @@ class SketchPadManager(private val imageView: ImageView) {
             else -> false
         }
     }
-    private fun setupClick(imageView: ImageView) = imageView
 }

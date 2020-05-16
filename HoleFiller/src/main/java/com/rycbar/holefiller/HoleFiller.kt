@@ -5,12 +5,51 @@ package com.rycbar.holefiller
  *  when the stencil is computed by proximity weights
  *
  *
- * Things left out of scope: Currently, the engine doesn't handle more than one hole. It does not handle affiliation
+ * Things left out of scope:
+ *
+ * 1. Currently, the library doesn't handle more than connected element of hole. It does not handle affiliation
  *  and interpolation by a specific hole.
  *
+ *  TODO: For that, define a Union-Find, add to it by geometric reachability,
+ *  u and v are in the same union iff there is a path of adjacent damaged colour pixels between u and v.
+ *  That is Ui..Un+1 = v where |Uj.x - Uj+1.x| <= 1 and |Uj.y - Uj+1.y| <= 1 and Colour(Uj) = damagedValueColour
+ *
+ * 2. A pixel colour is Float, and is monochromatic.
+ *
+ *
  */
-class HoleFiller(configuration: Configuration) {
-    data class Configuration(val normAdditionCoefficient: Double, val normExponent: Float, val connectivityMode: ConnectivityMode)
+class HoleFiller(private val configuration: Configuration) {
+    /**
+     * Configuration for the lib:
+     *
+     * Margin weights are calculated as 1/(|| u - v ||^z + e)
+     *
+     * @param normAdditionCoefficient the e factor above >= 0
+     * @param normExponent the z factor above, > 0
+     * @param connectivityMode 8 connectivity or 4 connectivity
+     * @param damagedValueColour a value to be recognised as "damaged" pixel colour.
+     */
+    data class Configuration(
+        val normAdditionCoefficient: Double,
+        val normExponent: Float,
+        val connectivityMode: ConnectivityMode,
+        val damagedValueColour: Float = -1f
+    )
+
+    /**
+     * Heal the image
+     *
+     * @param width of the image to import
+     * @param height of the image to import
+     * @param pixelImporter Clause to provide the value of a pixel in coordinates [0 <= x < width], [0 <= y < height].
+     *  Use the [Configuration.damagedValueColour] value to designate a damaged pixel.
+     *
+     */
+    fun heal(width: Int, height: Int, pixelImporter: (x: Int, y: Int) -> Float) : Image {
+        importImage(width, height, configuration.damagedValueColour, pixelImporter)
+        interpolateHole()
+        return image
+    }
 
     /**
      * Import an image, detect the edges of each hole.
@@ -20,17 +59,16 @@ class HoleFiller(configuration: Configuration) {
      * @param damagedValueColour Value for a pixel that's considered a hole
      * @param pixelImporter Clause to provide the value of a pixel in coordinates [0 <= x < width], [0 <= y < height]
      *
-     *
      */
-    fun importImage(width: Int, height: Int, damagedValueColour:Float, pixelImporter:(x: Int, y: Int) -> Float) {
-        val importedImage = Image(width, height)
+    private fun importImage(width: Int, height: Int, damagedValueColour:Float, pixelImporter:(x: Int, y: Int) -> Float) {
+        val importedImage = Image(width, height).also { image = it }
         lateinit var prevLine: FloatArray
         lateinit var currLine: FloatArray
         for (y in 0 until height) {
             currLine = FloatArray(width)
             for (x in 0 until width) {
                 currLine[x] = pixelImporter.invoke(x, y).also { if (it == damagedValueColour) {
-                    holePoints.add(Point(x, y))
+                    damagedPoints.add(Point(x, y))
                 } }
 
                 // Avoid a second pass, find edges on the fly
@@ -41,10 +79,10 @@ class HoleFiller(configuration: Configuration) {
                         currLine[x-1] == damagedValueColour,
                         currLine[x] == damagedValueColour)
 
-                    if (isTopLeft) edges.add(Point(x-1, y-1))
-                    if (isTopRight) edges.add(Point(x, y-1))
-                    if (isBottomLeft) edges.add(Point(x-1, y))
-                    if (isBottomRight) edges.add(Point(x, y))
+                    if (isTopLeft) edges[Point(x-1, y-1)] = prevLine[x-1]
+                    if (isTopRight) edges[Point(x, y-1)] = prevLine[x]
+                    if (isBottomLeft) edges[Point(x-1, y)] = currLine[x-1]
+                    if (isBottomRight) edges[Point(x, y)] = currLine[x]
                 }
             }
             importedImage[y] = currLine
@@ -53,9 +91,20 @@ class HoleFiller(configuration: Configuration) {
         image = importedImage
     }
 
-    private val edges = HashSet<Point>()
-    private val holePoints = HashSet<Point>()
+    /**
+     * Interpolate the damagedPixels based on the edges collected in [importImage] and the interpolation algorithm
+     */
+    private fun interpolateHole() {
+        damagedPoints.forEach { p ->
+            val numerator = edges.entries.sumByDouble { (point, colour) -> weights[point, p] * colour }
+            val nominator = edges.keys.sumByDouble { edgePoint -> weights[edgePoint, p] }
+            image[p.x, p.y] = (numerator / nominator).toFloat()
+        }
+    }
+
+    private val edges = HashMap<Point, Float>()
+    private val damagedPoints = HashSet<Point>()
     private val edgeDetector = VicinityProcessorFactory.create(configuration.connectivityMode)
-    private var image: Image? = null
-    private val normCache = WeightCache(configuration.normAdditionCoefficient, configuration.normExponent)
+    private lateinit var image: Image
+    private val weights = Weights(configuration.normAdditionCoefficient, configuration.normExponent)
 }
