@@ -1,5 +1,7 @@
 package com.rycbar.holefiller
 
+import java.util.concurrent.*
+
 /**
  * This is a hole filler engine. Given an image, it completes pixels marked damaged by omni-directional interpolation,
  *  when the stencil is computed by proximity weights
@@ -33,7 +35,8 @@ class HoleFiller(private val configuration: Configuration) {
         val normAdditionCoefficient: Double,
         val normExponent: Float,
         val connectivityMode: ConnectivityMode,
-        val damagedValueColour: Float = -1f
+        val damagedValueColour: Float = -1f,
+        val threadPoolSize: Int = 8
     )
 
     /**
@@ -95,15 +98,34 @@ class HoleFiller(private val configuration: Configuration) {
      * Interpolate the damagedPixels based on the edges collected in [importImage] and the interpolation algorithm
      */
     private fun interpolateHole() {
-        damagedPoints.forEach { p ->
-            val numerator = edges.entries.sumByDouble { (point, colour) -> weights[point, p] * colour }
-            val nominator = edges.keys.sumByDouble { edgePoint -> weights[edgePoint, p] }
-            image[p.x, p.y] = (numerator / nominator).toFloat()
-        }
+        val threadPool: ExecutorService? = if (configuration.threadPoolSize > 0) Executors.newFixedThreadPool(configuration.threadPoolSize) else null
+        val finishLatch = CountDownLatch(damagedPoints.size)
+        do {
+            val p = damagedPoints.poll()
+            if (p != null) {
+                if (threadPool != null) {
+                    threadPool.submit {
+                        processPixel(p)
+                        finishLatch.countDown()
+                    }
+                } else {
+                    processPixel(p)
+                }
+            }
+        } while (p != null)
+
+        if (threadPool != null) finishLatch.await()
+        threadPool?.shutdown()
+    }
+
+    private fun processPixel(p: Point) {
+        val numerator = edges.entries.sumByDouble { (point, colour) -> weights[point, p] * colour }
+        val nominator = edges.keys.sumByDouble { edgePoint -> weights[edgePoint, p] }
+        image[p.x, p.y] = (numerator / nominator).toFloat()
     }
 
     private val edges = HashMap<Point, Float>()
-    private val damagedPoints = HashSet<Point>()
+    private val damagedPoints = ConcurrentLinkedQueue<Point>()
     private val edgeDetector = VicinityProcessorFactory.create(configuration.connectivityMode)
     private lateinit var image: Image
     private val weights = Weights(configuration.normAdditionCoefficient, configuration.normExponent)

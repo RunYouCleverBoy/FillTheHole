@@ -26,11 +26,11 @@ class MainActivity : AppCompatActivity() {
 
         clearHolesButton.setOnClickListener {
             loadImageLiveData.postValue(
-                loadImageLiveData.value ?: "IMG_6893.JPG"
+                loadImageLiveData.value ?: "IMG_7833.JPG"
             )
         }
         fillHolesButton.setOnClickListener {
-            val healer = HoleFiller(HoleFiller.Configuration(0.2, 2f, ConnectivityMode.Connected8))
+            val healer = HoleFiller(HoleFiller.Configuration(0.01, 2f, ConnectivityMode.Connected8))
             val bitmap = testPad.getBitmap()?:return@setOnClickListener
             val image = healer.heal(bitmap.width, bitmap.height) {x, y ->
                 val px = bitmap.getPixel(x, y)
@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
                 for (y in 0 until bmp.height) {
                     for (x in 0 until bmp.width) {
                         val shade = (image[x, y] * 256f).coerceAtMost(255f).toInt()
-                        bitmap[x, y] = Color.argb(255, shade, shade, shade)
+                        bmp[x, y] = Color.argb(255, shade, shade, shade)
                     }
                 }
             })
@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        loadImageLiveData.postValue("IMG_6893.JPG")
+        loadImageLiveData.postValue("IMG_7833.JPG")
 
         brushSizeSetting.progress = 10
         brushSizeText.text = getString(R.string.brush_size_text, brushSizeSetting.progress)
@@ -89,9 +89,5 @@ class MainActivity : AppCompatActivity() {
             // We don't scale down because the main goal of the test is to be applied on enormous bitmaps
             immutable.copy(Bitmap.Config.ARGB_8888, true)
         }
-    }
-
-    private fun Bitmap.toGreyScaleArray(): Array<Array<Float>> {
-        return arrayOf()
     }
 }
