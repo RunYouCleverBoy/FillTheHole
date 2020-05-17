@@ -43,12 +43,10 @@ class SketchPadManager(private val imageView: ImageView) {
      * @param sourceBitmap Source bitmap, can be in colour. It will be converted to greyscale.
      *
      */
-    // TODO: Split to main and async part.
-    fun reload(sourceBitmap: Bitmap) {
-        val bitmap =
-            Bitmap.createBitmap(sourceBitmap.width, sourceBitmap.height, Bitmap.Config.RGB_565)
+    suspend fun reload(sourceBitmap: Bitmap) {
+        val bitmap = Bitmap.createBitmap(sourceBitmap.width, sourceBitmap.height, Bitmap.Config.RGB_565)
         canvas = Canvas(bitmap)
-        drawBitmapAsGreyScale(sourceBitmap)
+        withBlocking { drawBitmapAsGreyScale(sourceBitmap) }
         imageView.setImageBitmap(bitmap)
     }
 
@@ -76,7 +74,7 @@ class SketchPadManager(private val imageView: ImageView) {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun bindClickListener(imageView: ImageView) {
-        imageView.setOnTouchListener { _, event -> handleClick(event) }
+        imageView.setOnTouchListener { _, event -> handleTouch(event) }
     }
 
     /**
@@ -87,7 +85,7 @@ class SketchPadManager(private val imageView: ImageView) {
      *
      * @return true iff successful
      */
-    private fun strokeToPoint(x: Float, y: Float) : Boolean {
+    private fun strokeToPoint(x: Float, y: Float): Boolean {
         val sourcePoint = penPoint?.let { PointF(it.x, it.y) } ?: return false
         val targetPoint = PointF(x, y).also { penPoint = it }
         canvas.drawLine(sourcePoint.x, sourcePoint.y, targetPoint.x, targetPoint.y, dirtPaint)
@@ -95,12 +93,11 @@ class SketchPadManager(private val imageView: ImageView) {
         return true
     }
 
-    private fun handleClick(event: MotionEvent): Boolean {
+    private fun handleTouch(event: MotionEvent): Boolean {
         val transformed = transform.invoke(event.x, event.y)
         return when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                penPoint =
-                    PointF(transformed.x, transformed.y).apply { canvas.drawPoint(x, y, dirtPaint) }
+                penPoint = PointF(transformed.x, transformed.y).apply { canvas.drawPoint(x, y, dirtPaint) }
                 true
             }
             MotionEvent.ACTION_MOVE -> strokeToPoint(transformed.x, transformed.y)

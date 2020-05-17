@@ -1,4 +1,4 @@
-package com.rycbar.holefiller
+package com.rycbar.holefiller.internals
 
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
@@ -16,7 +16,7 @@ import kotlin.math.pow
  * Weights are calculated as w(u, v) = 1/(||u, v||^z + e)
  *
  */
-class Weights(private val epsilon: Double, private val power: Float) {
+internal class Weights(private val epsilon: Double, private val power: Float) {
     private val repository=ConcurrentHashMap<Int, Double>()
     private fun deltaHash(p1: Point, p2: Point) = abs(p1.x - p2.x) shl 16 or abs(p1.y - p2.y)
     operator fun get(p1: Point, p2: Point) : Double {
