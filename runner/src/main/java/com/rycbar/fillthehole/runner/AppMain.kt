@@ -16,45 +16,50 @@ fun main(args: Array<String>) {
     } catch (e: ArgsParser.ParserException) {
         print("Syntax error\n")
         print("Missing input: ${e.message}\n")
-        print("Syntax: ${ArgsParser.Mode.Mask.token} <Input file> <Input mask file: Anything brighter than 50% is considered a damaged pixel>")
+        print("Syntax: ${ArgsParser.Mode.Mask.token} <Input file> <Input mask file: Defective pixels should be painted in any (r+g+b)/3 < 10%. Others are painted black. Transparency is ignored>")
         print("Syntax: ${ArgsParser.Mode.Mask.token} <Input file> <Hex colour to designate defected pixel>")
         exitProcess(-1)
     }
 
-    val inputFile = when (val inputFiles = argsParser.inputFiles) {
-        is ArgsParser.InputFiles.FileAndHexColour -> File(inputFiles.path)
-        is ArgsParser.InputFiles.FileAndMask -> File(inputFiles.path)
-        null -> return // Not supposed to occur. Validation is done beforehand
+    val inputFile = try {
+        when (val inputFiles = argsParser.inputFiles) {
+            is ArgsParser.InputFiles.FileAndHexColour -> File(inputFiles.path)
+            is ArgsParser.InputFiles.FileAndMask -> File(inputFiles.path)
+            null -> exitProcess(-1) // Not supposed to occur. Validation is done beforehand
+        }
+    } catch (exception: Exception) {
+        print("Failed to open files")
+        exitProcess(-1)
     }
 
     val config = HoleFiller.Configuration(normAdditionCoefficient = 0.01, normExponent = 2f, connectivityMode = ConnectivityMode.Connected8)
-    val healerInput: HealerInput = when (val inputArguments = argsParser.inputFiles) {
-        is ArgsParser.InputFiles.FileAndMask -> paramsWithMask(inputArguments, config)
-        is ArgsParser.InputFiles.FileAndHexColour -> paramsWithColour(inputArguments, config)
+    val pixelTranslationDescriptor: PixelTranslationDescriptor = when (val inputArguments = argsParser.inputFiles) {
+        is ArgsParser.InputFiles.FileAndMask -> openFilesWithMask(inputArguments, config)
+        is ArgsParser.InputFiles.FileAndHexColour -> openFileWithColour(inputArguments, config)
         else -> {
             // Should not get here, ever
             print("Syntax error")
-            return
+            exitProcess(-1)
         }
     }
 
-    val image: Image? = heal(healerInput, config)
-    val outImage = PixelManipulators.convertToRgb(healerInput.width, healerInput.height, image)
+    val image: Image? = heal(pixelTranslationDescriptor, config)
+    val outImage = PixelManipulators.convertToRgb(pixelTranslationDescriptor.width, pixelTranslationDescriptor.height, image)
 
     ImageIO.write(outImage, inputFile.extension, inputFile.run { File(this.parent, "${nameWithoutExtension}.out.$extension") })
 }
 
-data class HealerInput(val width: Int, val height: Int, val conversionLambda: (x: Int, y: Int) -> Float)
+data class PixelTranslationDescriptor(val width: Int, val height: Int, val conversionLambda: (x: Int, y: Int) -> Float)
 
-private fun paramsWithColour(inputArguments: ArgsParser.InputFiles.FileAndHexColour, config: HoleFiller.Configuration): HealerInput {
+private fun openFileWithColour(inputArguments: ArgsParser.InputFiles.FileAndHexColour, config: HoleFiller.Configuration): PixelTranslationDescriptor {
     val inputImage: BufferedImage = ImageIO.read(File(inputArguments.path))
-    return HealerInput(inputImage.width, inputImage.height) { x, y ->
+    return PixelTranslationDescriptor(inputImage.width, inputImage.height) { x, y ->
         val rawPixel = inputImage.getRGB(x, y)
         val damagedColour = inputArguments.colour
         val redDiff = abs(rawPixel.red - damagedColour.red)
         val greenDiff = abs(rawPixel.green - damagedColour.green)
         val blueDiff = abs(rawPixel.blue - damagedColour.blue)
-        if (maxOf(redDiff, greenDiff, blueDiff) > 16) {
+        if (maxOf(redDiff, greenDiff, blueDiff) > 16) { // Antialias may make things ugly
             rawPixel.toGreyScale()
         } else {
             config.damagedValueColour
@@ -62,24 +67,25 @@ private fun paramsWithColour(inputArguments: ArgsParser.InputFiles.FileAndHexCol
     }
 }
 
-private fun paramsWithMask(inputArguments: ArgsParser.InputFiles.FileAndMask, config: HoleFiller.Configuration): HealerInput {
+private fun openFilesWithMask(inputArguments: ArgsParser.InputFiles.FileAndMask, config: HoleFiller.Configuration): PixelTranslationDescriptor {
     val inputImage: BufferedImage = ImageIO.read(File(inputArguments.path))
     val maskImage: BufferedImage = ImageIO.read(File(inputArguments.maskPath))
 
+    // Transparent pixels should be painted black
     val converterLambda = { x: Int, y: Int ->
-        if (maskImage.getRGB(x, y).toGreyScale() <= 0.5f) inputImage.getRGB(x, y).toGreyScale() else config.damagedValueColour
+        if (maskImage.getRGB(x, y).toGreyScale() <= 0.1f) inputImage.getRGB(x, y).toGreyScale() else config.damagedValueColour
     }
 
-    return HealerInput(inputImage.width, inputImage.height, converterLambda)
+    return PixelTranslationDescriptor(inputImage.width, inputImage.height, converterLambda)
 }
 
 
-private fun heal(healerInput: HealerInput, config: HoleFiller.Configuration): Image? {
+private fun heal(pixelTranslationDescriptor: PixelTranslationDescriptor, config: HoleFiller.Configuration): Image? {
     val engine = HoleFiller(config)
     val latch = CountDownLatch(1)
     val refTime = System.currentTimeMillis()
     var image: Image? = null
-    engine.heal(healerInput.width, healerInput.height, healerInput.conversionLambda) {
+    engine.heal(pixelTranslationDescriptor.width, pixelTranslationDescriptor.height, pixelTranslationDescriptor.conversionLambda) {
         println("Healed the image in ${(System.currentTimeMillis() - refTime) / 1000f}s")
         image = it
         latch.countDown()

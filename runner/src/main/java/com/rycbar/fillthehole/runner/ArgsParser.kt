@@ -1,6 +1,5 @@
 package com.rycbar.fillthehole.runner
 
-import java.lang.Exception
 import java.util.*
 
 class ArgsParser {
