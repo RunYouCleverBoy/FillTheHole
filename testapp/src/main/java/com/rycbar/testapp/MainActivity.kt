@@ -33,10 +33,11 @@ class MainActivity : AppCompatActivity() {
             val deferred = CompletableDeferred<Image>()
             val healer = HoleFiller(HoleFiller.Configuration(0.01, 2f, ConnectivityMode.Connected8))
             val bitmap = testPad.getBitmap() ?: return@setOnClickListener
-            healer.heal(bitmap.width, bitmap.height) { x, y ->
+            val pixelImporter = { x: Int, y: Int ->
                 val px = bitmap.getPixel(x, y)
                 if (px != testPad.damagedPixelColour) (px.red + px.green + px.blue) / (3f * 255f) else -1f
-            }.then { deferred.complete(it) }
+            }
+            healer.heal(bitmap.width, bitmap.height, pixelImporter) { deferred.complete(it) }
 
             launchUI {
                 val image = deferred.await()

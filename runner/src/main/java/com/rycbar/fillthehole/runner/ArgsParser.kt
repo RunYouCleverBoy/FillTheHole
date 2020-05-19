@@ -1,6 +1,5 @@
 package com.rycbar.fillthehole.runner
 
-import com.sun.tools.corba.se.idl.InvalidArgument
 import java.lang.Exception
 import java.util.*
 
@@ -24,7 +23,7 @@ class ArgsParser {
         data class FileAndMask(val path: String, val maskPath: String) : InputFiles()
     }
 
-    class ParserException(message: String): InvalidArgument(message)
+    class ParserException(message: String): IllegalArgumentException(message)
     private fun Iterator<String>.nextOrThrow(message: String) = if (hasNext()) next() else throw ParserException(message)
     private fun Iterator<String>.nextHexOrThrow(message: String) = try {
         next().replace("#", "").replace("x", "", ignoreCase = true).toInt(16)

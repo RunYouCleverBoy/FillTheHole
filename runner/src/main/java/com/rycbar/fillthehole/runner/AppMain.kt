@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import javax.imageio.ImageIO
+import kotlin.math.abs
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -20,28 +21,16 @@ fun main(args: Array<String>) {
         exitProcess(-1)
     }
 
+    val inputFile = when (val inputFiles = argsParser.inputFiles) {
+        is ArgsParser.InputFiles.FileAndHexColour -> File(inputFiles.path)
+        is ArgsParser.InputFiles.FileAndMask -> File(inputFiles.path)
+        null -> return // Not supposed to occur. Validation is done beforehand
+    }
+
     val config = HoleFiller.Configuration(normAdditionCoefficient = 0.01, normExponent = 2f, connectivityMode = ConnectivityMode.Connected8)
-    val engine = HoleFiller(config)
-
-    data class HealerInput(val width: Int, val height: Int, val inputFileName: String, val conversionLambda: (x: Int, y: Int) -> Float)
-
     val healerInput: HealerInput = when (val inputArguments = argsParser.inputFiles) {
-        is ArgsParser.InputFiles.FileAndMask -> {
-            val inputImage: BufferedImage = ImageIO.read(File(inputArguments.path))
-            val maskImage: BufferedImage = ImageIO.read(File(inputArguments.maskPath))
-
-            val converterLambda = { x:Int, y: Int ->
-                if (maskImage.getRGB(x, y).toGreyScale() <= 0.5f) inputImage.getRGB(x, y).toGreyScale() else config.damagedValueColour
-            }
-
-            HealerInput(inputImage.width, inputImage.height, inputArguments.path, converterLambda)
-        }
-        is ArgsParser.InputFiles.FileAndHexColour -> {
-            val inputImage: BufferedImage = ImageIO.read(File(inputArguments.path))
-            HealerInput(inputImage.width, inputImage.height, inputArguments.path) { x, y ->
-                inputImage.getRGB(x, y).let { if (it != inputArguments.colour) it.toGreyScale() else config.damagedValueColour }
-            }
-        }
+        is ArgsParser.InputFiles.FileAndMask -> paramsWithMask(inputArguments, config)
+        is ArgsParser.InputFiles.FileAndHexColour -> paramsWithColour(inputArguments, config)
         else -> {
             // Should not get here, ever
             print("Syntax error")
@@ -49,23 +38,56 @@ fun main(args: Array<String>) {
         }
     }
 
+    val image: Image? = heal(healerInput, config)
+    val outImage = PixelManipulators.convertToRgb(healerInput.width, healerInput.height, image)
+
+    ImageIO.write(outImage, inputFile.extension, inputFile.run { File(this.parent, "${nameWithoutExtension}.out.$extension") })
+}
+
+data class HealerInput(val width: Int, val height: Int, val conversionLambda: (x: Int, y: Int) -> Float)
+
+private fun paramsWithColour(inputArguments: ArgsParser.InputFiles.FileAndHexColour, config: HoleFiller.Configuration): HealerInput {
+    val inputImage: BufferedImage = ImageIO.read(File(inputArguments.path))
+    return HealerInput(inputImage.width, inputImage.height) { x, y ->
+        val rawPixel = inputImage.getRGB(x, y)
+        val damagedColour = inputArguments.colour
+        val redDiff = abs(rawPixel.red - damagedColour.red)
+        val greenDiff = abs(rawPixel.green - damagedColour.green)
+        val blueDiff = abs(rawPixel.blue - damagedColour.blue)
+        if (maxOf(redDiff, greenDiff, blueDiff) > 16) {
+            rawPixel.toGreyScale()
+        } else {
+            config.damagedValueColour
+        }
+    }
+}
+
+private fun paramsWithMask(inputArguments: ArgsParser.InputFiles.FileAndMask, config: HoleFiller.Configuration): HealerInput {
+    val inputImage: BufferedImage = ImageIO.read(File(inputArguments.path))
+    val maskImage: BufferedImage = ImageIO.read(File(inputArguments.maskPath))
+
+    val converterLambda = { x: Int, y: Int ->
+        if (maskImage.getRGB(x, y).toGreyScale() <= 0.5f) inputImage.getRGB(x, y).toGreyScale() else config.damagedValueColour
+    }
+
+    return HealerInput(inputImage.width, inputImage.height, converterLambda)
+}
+
+
+private fun heal(healerInput: HealerInput, config: HoleFiller.Configuration): Image? {
+    val engine = HoleFiller(config)
     val latch = CountDownLatch(1)
+    val refTime = System.currentTimeMillis()
     var image: Image? = null
-    engine.heal(healerInput.width, healerInput.height, healerInput.conversionLambda) .then {
+    engine.heal(healerInput.width, healerInput.height, healerInput.conversionLambda) {
+        println("Healed the image in ${(System.currentTimeMillis() - refTime) / 1000f}s")
         image = it
         latch.countDown()
     }
 
     latch.await()
-    val outImage = BufferedImage(healerInput.width, healerInput.height, BufferedImage.TYPE_INT_RGB)
-    for (y in 0 until healerInput.height) {
-        for (x in 0 until healerInput.width) {
-            outImage.setRGB(y, x, image?.get(x, y)?.times(256)?.toInt() ?: 0)
-        }
-    }
-
-    val inputFile = File(healerInput.inputFileName)
-    ImageIO.write(outImage, inputFile.extension, inputFile.apply { File(this.parent, "${nameWithoutExtension}.out.$extension") })
+    return image
 }
 
-fun Int.toGreyScale() : Float = ((this and 0xFF) + ((this shr 8) and 0xFF) + ((this shr 16) and 0xFF)).toFloat()/(3f*256f)
+
+

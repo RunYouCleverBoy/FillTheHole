@@ -38,19 +38,6 @@ class HoleFiller(configuration: Configuration) {
     data class Configuration(val normAdditionCoefficient: Double, val normExponent: Float, val connectivityMode: ConnectivityMode, val damagedValueColour: Float = -1f)
 
     /**
-     * Promise, a result that invokes a deferred callback. Use "then" to determine what to do when
-     *  completed. use Then to bind a method for execution on done.
-     */
-    class Promise<T> {
-        private var f: (T) -> Unit = {}
-        fun then(f: (T) -> Unit) {
-            this.f = f
-        }
-
-        internal fun resolve(data: T) = f(data)
-    }
-
-    /**
      * Heal the image by interpolation
      *
      * @param width of the image to import
@@ -59,16 +46,19 @@ class HoleFiller(configuration: Configuration) {
      *  Use the [Configuration.damagedValueColour] value to designate a damaged pixel.
      *
      */
-    fun heal(width: Int, height: Int, pixelConverter: (x: Int, y: Int) -> Float): Promise<Image> {
-        val promise = Promise<Image>()
+    fun heal(width: Int, height: Int, pixelConverter: (x: Int, y: Int) -> Float, onDone:(Image) -> Unit) {
+        println("Importing image")
         importImage(width, height, pixelConverter)
-        val executor = advancedParamsInterface.executorGenerator.invoke()
+
+        val executor = advancedParamsInterface.executorManager.generator.invoke()
         interpolationProcessor.onFinished = {
-            executor.shutdown()
-            promise.resolve(image)
+            println("Finished healing, cleaning up")
+            advancedParamsInterface.executorManager.destructor.invoke(executor)
+            onDone.invoke(image)
         }
+
+        println("Interpolating the hole")
         interpolationProcessor.interpolateHole(executor, 16)
-        return promise
     }
 
     /**
@@ -77,11 +67,12 @@ class HoleFiller(configuration: Configuration) {
      *
      */
     @Suppress("unused") class AdvancedParamsInterface {
+        data class ExecutorBehaviour(val generator: () -> Executor, val destructor: (Executor) -> Unit)
         @Suppress("MemberVisibilityCanBePrivate")
-        internal var executorGenerator: () -> Executor = { FixedThreadPoolExecutor(8) }
+        internal var executorManager = ExecutorBehaviour({ FixedThreadPoolExecutor(8) }, { executor -> executor.shutdown() })
 
         fun setThreadPoolExecutor(size: Int) {
-            executorGenerator = { FixedThreadPoolExecutor(size) }
+            executorManager = ExecutorBehaviour({ FixedThreadPoolExecutor(size) }, { executor -> executor.shutdown() })
         }
     }
 
