@@ -10,14 +10,14 @@ import javax.imageio.ImageIO
 import kotlin.math.abs
 import kotlin.system.exitProcess
 
-fun main(args: Array<String>) {
+    fun main(args: Array<String>) {
     val argsParser: ArgsParser = try {
         ArgsParser().parse(args)
     } catch (e: ArgsParser.ParserException) {
-        print("Syntax error\n")
-        print("Missing input: ${e.message}\n")
-        print("Syntax: ${ArgsParser.Mode.Mask.token} <Input file> <Input mask file: Defective pixels should be painted in any (r+g+b)/3 < 10%. Others are painted black. Transparency is ignored>")
-        print("Syntax: ${ArgsParser.Mode.Mask.token} <Input file> <Hex colour to designate defected pixel>")
+        println("Syntax error\n")
+        println("Missing input: ${e.message}\n")
+        println("Syntax: ${ArgsParser.Mode.Mask.token} <Input file> <Input mask file: Defective pixels should be painted in any (r+g+b)/3 < 10%. Others are painted black. Transparency is ignored>")
+        println("Syntax: ${ArgsParser.Mode.Mask.token} <Input file> <Hex colour to designate defected pixel>")
         exitProcess(-1)
     }
 
