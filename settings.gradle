@@ -1,4 +1,3 @@
 rootProject.name='FillTheHole'
 include ':testapp'
 include ':HoleFiller'
-include ':runner'
