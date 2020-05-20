@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val imageNames = assets.list(".")?.filter { name -> listOf(".png", ".jpg").any { name.endsWith(it, ignoreCase = true) } }
+        val imageNames = assets.list("")?.filter { name -> listOf(".png", ".jpg").any { name.endsWith(it, ignoreCase = true) } }
         loadImageLiveData.postValue(imageNames?.get(currentImageIndex))
 
         clearHolesButton.setOnClickListener {
