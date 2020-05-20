@@ -10,8 +10,8 @@
         android:id="@+id/clearHolesButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:text="@string/clear"
-        app:layout_constraintBottom_toTopOf="@+id/buttonsGuideline"
         app:layout_constraintEnd_toStartOf="@+id/fillHolesButton"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
@@ -21,8 +21,8 @@
         android:id="@+id/fillHolesButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:text="@string/fill_the_holes"
-        app:layout_constraintBottom_toTopOf="@+id/buttonsGuideline"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/clearHolesButton"
@@ -33,6 +33,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="fitCenter"
+        android:contentDescription="@string/image_for_demo"
         app:layout_constraintBottom_toTopOf="@+id/brushControlGuides"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -70,4 +71,13 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/brushControlGuides" />
+
+    <Button
+        android:id="@+id/nextImageButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/next_image"
+        app:layout_constraintBottom_toTopOf="@+id/testPadView"
+        app:layout_constraintStart_toStartOf="@+id/clearHolesButton"
+        app:layout_constraintTop_toBottomOf="@+id/clearHolesButton" />
 </androidx.constraintlayout.widget.ConstraintLayout>

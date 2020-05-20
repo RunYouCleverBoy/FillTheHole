@@ -22,12 +22,16 @@ import kotlinx.coroutines.CompletableDeferred
 class MainActivity : AppCompatActivity() {
     private val testPad: SketchPadManager by lazy { SketchPadManager(testPadView) }
     private val loadImageLiveData = MutableLiveData<String>()
+    private var currentImageIndex = 0
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val imageNames = assets.list(".")?.filter { name -> listOf(".png", ".jpg").any { name.endsWith(it, ignoreCase = true) } }
+        loadImageLiveData.postValue(imageNames?.get(currentImageIndex))
+
         clearHolesButton.setOnClickListener {
-            loadImageLiveData.postValue(loadImageLiveData.value ?: "IMG_7833.JPG")
+            loadImageLiveData.postValue(loadImageLiveData.value ?: imageNames?.get(currentImageIndex))
         }
         fillHolesButton.setOnClickListener {
             val deferred = CompletableDeferred<Image>()
@@ -63,7 +67,9 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        loadImageLiveData.postValue("IMG_7833.JPG")
+        nextImageButton.setOnClickListener {
+            loadImageLiveData.postValue(imageNames?.get((++currentImageIndex) % imageNames.size))
+        }
 
         brushSizeSetting.progress = 10
         brushSizeText.text = getString(R.string.brush_size_text, brushSizeSetting.progress)

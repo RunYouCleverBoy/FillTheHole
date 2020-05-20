@@ -3,4 +3,6 @@
     <string name="clear">Clear</string>
     <string name="fill_the_holes">Fill the holes</string>
     <string name="brush_size_text">Brush: %d dp</string>
+    <string name="next_image">Next Image</string>
+    <string name="image_for_demo">Image For Demo</string>
 </resources>
